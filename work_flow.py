@@ -19,6 +19,8 @@ import datetime
 
 def prepare():
     logging.info("************************ process start ***************************************")
+    print(">>> 开始执行 prepare 流程...")
+
     all_data = ak.stock_zh_a_spot_em()
     subset = all_data[['代码', '名称']]
     stocks = [tuple(x) for x in subset.values]
@@ -29,7 +31,7 @@ def prepare():
         '均线多头': keep_increasing.check,
         '停机坪': parking_apron.check,
         '回踩年线': backtrace_ma250.check,
-        # '突破平台': breakthrough_platform.check,
+        '突破平台': breakthrough_platform.check,
         '无大幅回撤': low_backtrace_increase.check,
         '海龟交易法则': turtle_trade.check_enter,
         '高而窄的旗形': high_tight_flag.check,
@@ -41,12 +43,13 @@ def prepare():
 
     process(stocks, strategies)
 
-
+    print(">>> prepare 流程执行完毕...")
     logging.info("************************ process   end ***************************************")
 
 def process(stocks, strategies):
     stocks_data = data_fetcher.run(stocks)
     for strategy, strategy_func in strategies.items():
+        print(f">>> 开始执行策略: {strategy}")
         check(stocks_data, strategy, strategy_func)
         time.sleep(2)
 
@@ -54,6 +57,7 @@ def check(stocks_data, strategy, strategy_func):
     end = settings.config['end_date']
     m_filter = check_enter(end_date=end, strategy_fun=strategy_func)
     results = dict(filter(m_filter, stocks_data.items()))
+    print(f">>> 策略 {strategy} 筛选结果数量: {len(results)}")
     if len(results) > 0:
         push.strategy('**************"{0}"**************\n{1}\n**************"{0}"**************\n'.format(strategy, list(results.keys())))
 

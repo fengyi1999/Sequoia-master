@@ -7,9 +7,10 @@ import talib as tl
 import concurrent.futures
 
 
+
 def fetch(code_name):
     stock = code_name[0]
-    data = ak.stock_zh_a_hist(symbol=stock, period="daily", start_date="20220101", adjust="qfq")
+    data = ak.stock_zh_a_hist(symbol=stock, period="daily", start_date="20240201",adjust="qfq")
 
     if data is None or data.empty:
         logging.debug("股票："+stock+" 没有数据，略过...")
@@ -22,7 +23,7 @@ def fetch(code_name):
 
 def run(stocks):
     stocks_data = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         future_to_stock = {executor.submit(fetch, stock): stock for stock in stocks}
         for future in concurrent.futures.as_completed(future_to_stock):
             stock = future_to_stock[future]
