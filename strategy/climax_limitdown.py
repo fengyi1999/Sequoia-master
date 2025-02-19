@@ -4,7 +4,7 @@ import talib as tl
 import pandas as pd
 import logging
 
-
+# 放量跌停策略
 def check(code_name, data, end_date=None, threshold=60):
     if len(data) < threshold:
         logging.debug("{0}:样本小于250天...\n".format(code_name))

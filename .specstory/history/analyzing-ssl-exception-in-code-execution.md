@@ -1282,6 +1282,94 @@ def check(stock_code, data, end_date=None, threshold=5):
 
 ---
 
+_**User**_
+
+修改生成sequoia.log部分的代码，将每次输出的代码按日期和运行次数命名，如今天运行main的第5次输出结果应该存到./logs文件夹的新建20250219-5.log文件，同时请将选选出的股票代码生成一个同花顺软件可以打开的.sel文件，命名为20250219-5.sel
+
+---
+
+_**Assistant**_
+
+```python:work_flow.py
+import os
+import datetime
+
+def generate_log_and_sel_filenames():
+    """生成日志文件名和选股文件名"""
+    
+    base_dir = "logs"
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+    
+    today_str = datetime.date.today().strftime("%Y%m%d")
+    
+    # 查找当前日期已有的日志文件
+    existing_logs = [f for f in os.listdir(base_dir) if f.startswith(today_str) and f.endswith(".log")]
+    
+    run_count = len(existing_logs) + 1
+    
+    log_filename = os.path.join(base_dir, f"{today_str}-{run_count}.log")
+    sel_filename = os.path.join(base_dir, f"{today_str}-{run_count}.sel")
+    
+    return log_filename, sel_filename
+
+# 在main.py中使用
+log_filename, sel_filename = generate_log_and_sel_filenames()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(message)s',
+    handlers=[
+        logging.FileHandler(log_filename),  # 使用动态文件名
+        logging.StreamHandler()
+    ]
+)
+
+# 在work_flow.py的check函数中使用
+def check(stocks_data, strategy, strategy_func):
+    # ... existing code ...
+    if len(results) > 0:
+        # ... existing push.strategy call ...
+        
+        # 生成.sel文件
+        with open(sel_filename, "a", encoding="gbk") as f:  # 追加模式
+            for code in results.keys():
+                f.write(code[0] + "\n")
+```
+
+**代码修改说明**：
+
+1.  **`generate_log_and_sel_filenames()` 函数**：
+    *   创建 `logs` 目录（如果不存在）。
+    *   根据当前日期（`YYYYMMDD` 格式）和运行次数生成日志文件名（`.log`）和选股文件名（`.sel`）。
+    *   查找 `logs` 目录下已存在的当天日志文件，确定当前运行次数。
+
+2.  **`main.py` 修改**：
+    *   调用 `generate_log_and_sel_filenames()` 获取文件名。
+    *   在 `logging.basicConfig` 中使用动态生成的日志文件名。
+
+3.  **`work_flow.py` 修改**：
+    *   在 `check` 函数中，当有选股结果时，以追加模式（`"a"`）打开 `.sel` 文件。
+    *   将每个选出的股票代码（`code[0]`）写入 `.sel` 文件，每个代码占一行。
+    *   使用 `gbk` 编码以兼容同花顺软件。
+
+**使用方法**：
+
+1.  **确保项目根目录下存在 `logs` 文件夹**（代码会自动创建）。
+2.  **直接运行 `main.py`**。
+3.  每次运行，会在 `logs` 目录下生成新的日志文件（`.log`）和选股文件（`.sel`），文件名包含日期和运行次数。
+4.  使用同花顺软件打开 `.sel` 文件，即可导入选股结果。
+
+**注意事项**：
+
+*   `.sel` 文件使用 `gbk` 编码，以确保同花顺软件能正确识别。
+*   每次运行 `main.py` 都会生成新的日志文件和选股文件，旧文件不会被覆盖。
+*   如果同一天内多次运行，且选股结果有重复，`.sel` 文件中可能会有重复的股票代码（因为是追加模式）。如果需要去重，可以在写入前对 `results.keys()` 进行处理。
+*   确保 `main.py` 和 `work_flow.py` 都使用了修改后的代码。
+
+
+---
+
 
 
 ---

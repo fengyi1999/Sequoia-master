@@ -37,12 +37,14 @@ def job():
         logging.error(f"执行任务时出错: {str(e)}")
         time.sleep(5)  # 出错后等待一段时间再重试
 
+# 获取日志文件名
+log_filename, _ = work_flow.generate_log_and_sel_filenames()
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(message)s',
     handlers=[
-        logging.FileHandler("sequoia.log"),
+        logging.FileHandler(log_filename),
         logging.StreamHandler()
     ]
 )
