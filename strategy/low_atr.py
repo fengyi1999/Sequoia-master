@@ -4,7 +4,7 @@ import talib as tl
 import logging
 
 
-# 低ATR成长策略
+# 低ATR成长策略 - 寻找波动率小但仍有稳定增长的股票
 def check_low_increase(code_name, data, end_date=None, ma_short=30, ma_long=250, threshold=10):
     stock = code_name[0]
     name = code_name[1]

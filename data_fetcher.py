@@ -8,6 +8,38 @@ import talib as tl  # 导入talib库，用于技术分析指标计算
 import concurrent.futures  # 导入并发处理库，用于多线程执行
 
 
+def is_target_market_stock(stock_code):
+    """判断股票是否属于目标市场（沪深主板、中小板、创业板）
+    
+    Args:
+        stock_code: 股票代码
+        
+    Returns:
+        布尔值，True表示属于目标市场，False表示不属于
+    """
+    # 沪市主板：600开头、601开头、603开头、605开头
+    # 深市主板：000开头
+    # 中小板：002开头（已合并到深市主板，但保留板块概念）
+    # 创业板：300开头、301开头
+    
+    # 去除股票代码中可能的前缀
+    if '.' in stock_code:
+        stock_code = stock_code.split('.')[0]
+    
+    # 判断股票代码前缀
+    if (stock_code.startswith('600') or 
+        stock_code.startswith('601') or 
+        stock_code.startswith('603') or 
+        stock_code.startswith('605') or 
+        stock_code.startswith('000') or 
+        stock_code.startswith('002') or 
+        stock_code.startswith('300') or 
+        stock_code.startswith('301')):
+        return True
+    
+    return False
+
+
 def fetch(code_name):
     """获取单个股票的历史数据
     Args:
@@ -16,6 +48,12 @@ def fetch(code_name):
         处理后的股票数据DataFrame
     """
     stock = code_name[0]  # 从元组中获取股票代码
+    
+    # 检查股票是否属于目标市场
+    if not is_target_market_stock(stock):
+        logging.debug(f"股票：{stock} 不在目标市场范围内（沪深主板、中小板、创业板），略过...")
+        return
+    
     # 使用akshare获取股票历史数据，包括参数：股票代码、日期频率、开始日期、复权方式
     data = ak.stock_zh_a_hist(symbol=stock, period="daily", start_date="20240201",adjust="qfq")
 

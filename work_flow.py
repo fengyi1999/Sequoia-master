@@ -17,6 +17,7 @@ import logging
 import time
 import datetime
 import os
+import pandas as pd
 
 
 def prepare():
@@ -32,13 +33,15 @@ def prepare():
     statistics(all_data, stocks)
 
     strategies = {
+        
         '放量上涨': enter.check_volume,
         '均线多头': keep_increasing.check,
         '停机坪': parking_apron.check,
         '回踩年线': backtrace_ma250.check,
         '突破平台': breakthrough_platform.check,
         '无大幅回撤': low_backtrace_increase.check,
-        #'海龟交易法则': turtle_trade.check_enter,
+        
+        '海龟交易法则': turtle_trade.check_enter,
         '高而窄的旗形': high_tight_flag.check,
         '低ATR成长策略': low_atr.check_low_increase,
         '低回撤稳步上涨策略': low_backtrace_increase.check,
@@ -67,10 +70,9 @@ def check(stocks_data, strategy, strategy_func, sel_filename):
     if len(results) > 0:
         push.strategy('**************"{0}"**************\n{1}\n**************"{0}"**************\n'.format(strategy, list(results.keys())))
         
-        # 生成.sel文件
-        with open(sel_filename, "a", encoding="gbk") as f:  # 追加模式
-            for code in results.keys():
-                f.write(code[0] + "\n")
+        # 生成.txt文件
+        selected_stocks = [(stock_name, stock_code) for stock_name, stock_code in results.keys()]
+        save_to_excel(selected_stocks, sel_filename)
 
 
 def check_enter(end_date=None, strategy_fun=enter.check_volume):
@@ -115,23 +117,79 @@ def statistics(all_data, stocks):
     push.statistics(msg)
 
 def generate_log_and_sel_filenames():
-    """生成日志文件名和选股文件名"""
+    import os
+    import datetime
     
-    base_dir = "logs"
-    if not os.path.exists(base_dir):
-        os.makedirs(base_dir)
+    now = datetime.datetime.now()
+    date_str = now.strftime("%Y%m%d")
+    time_str = now.strftime("%H%M%S")
     
-    today_str = datetime.date.today().strftime("%Y%m%d")
+    # 修正：使用正确的logs文件夹名称
+    log_filename = f"./logs/log_{date_str}_{time_str}.log"
     
-    # 查找当前日期已有的日志文件
-    existing_logs = [f for f in os.listdir(base_dir) if f.startswith(today_str) and f.endswith(".log")]
+    # 确保selection目录存在
+    sel_dir = "./selection"
+    os.makedirs(sel_dir, exist_ok=True)
     
-    run_count = len(existing_logs) + 1
-    
-    log_filename = os.path.join(base_dir, f"{today_str}-{run_count}.log")
-    sel_filename = os.path.join(base_dir, f"{today_str}-{run_count}.sel")
+    sel_filename = f"{sel_dir}/selection_{date_str}_{time_str}.xlsx"
     
     return log_filename, sel_filename
+
+def save_to_excel(stocks_data, filename):
+    """
+    将股票数据保存为Excel文件
+    
+    Args:
+        stocks_data: 包含股票名称和代码的列表或字典
+        filename: 保存的文件名
+    """
+    # 确保目录存在
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    
+    # 准备数据，假设stocks_data是一个包含(名称, 代码)元组的列表
+    new_df = pd.DataFrame(stocks_data, columns=[ '代码','名称'])
+    
+    # 确保股票代码不省略前导零
+    # 将代码列转换为字符串类型，并确保保留前导零
+    new_df['代码'] = new_df['代码'].astype(str).str.zfill(6)
+    
+    # 检查文件是否已存在
+    if os.path.exists(filename):
+        try:
+            # 读取现有的Excel文件，不使用index_col参数，以读取所有列
+            existing_df = pd.read_excel(filename, engine='openpyxl')
+            
+            # 如果现有文件中包含序号列，需要去除它
+            if '序号' in existing_df.columns:
+                existing_df = existing_df.drop(columns=['序号'])
+            # 如果第一列没有列名，可能是索引列，尝试去除
+            if existing_df.columns[0] == 'Unnamed: 0':
+                existing_df = existing_df.iloc[:, 1:]
+            
+            # 确保现有数据的股票代码也是正确格式（有前导零）
+            if '代码' in existing_df.columns:
+                existing_df['代码'] = existing_df['代码'].astype(str).str.zfill(6)
+            
+            # 合并现有数据和新数据
+            # 使用concat函数合并两个DataFrame，忽略索引
+            combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+            
+            # 去重（如果需要）- 基于名称和代码列去重
+            combined_df = combined_df.drop_duplicates(subset=['名称', '代码'])
+            
+            # 保存合并后的数据，不使用索引列
+            combined_df.to_excel(filename, index=False, engine='openpyxl')
+            
+            print(f"已将新的选股结果追加至: {filename}")
+        except Exception as e:
+            print(f"读取或更新现有文件时出错: {e}")
+            # 如果出错，创建新文件
+            new_df.to_excel(filename, index=False, engine='openpyxl')
+            print(f"已创建新的选股结果文件: {filename}")
+    else:
+        # 如果文件不存在，直接创建新文件
+        new_df.to_excel(filename, index=False, engine='openpyxl')
+        print(f"已创建新的选股结果文件: {filename}")
 
 
 

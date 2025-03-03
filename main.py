@@ -12,10 +12,6 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-
-
-
-
 def setup_requests_session():
     session = requests.Session()
     retry = Retry(
